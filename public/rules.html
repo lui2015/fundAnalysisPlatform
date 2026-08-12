@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="基金分析平台的评分口径与风险规则清单：四刻度如何计算、阈值如何按基金类型差异化、哪些是硬红线。">
+<title>评分口径与风险规则 · 基金分析平台</title>
+<link rel="stylesheet" href="css/style.css">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('fap_theme');
+      if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+      if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <a class="logo" href="index.html"><i class="logo__mark"></i>基金分析平台</a>
+    <span class="topbar__spacer"></span>
+    <a class="topbar__link" href="index.html">返回首页</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换明暗主题">☾</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" style="text-align:left">
+    <h1>评分口径与风险规则</h1>
+    <p id="statement">加载中…</p>
+  </section>
+  <div id="content"></div>
+  <footer class="footer">
+    <b>免责声明</b><br>
+    <span id="disclaimer-text"></span>
+  </footer>
+</main>
+
+<script src="js/common.js"></script>
+<script src="js/rules.js"></script>
+</body>
+</html>

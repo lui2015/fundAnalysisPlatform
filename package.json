@@ -1,0 +1,22 @@
+{
+  "name": "fund-analysis-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "基金分析平台：输入基金名称或代码，AI 按「总览 / 好业绩 / 好舵手 / 好体验 / 好时机与成本 / 风险排雷」六大板块输出结构化分析报告",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test:smoke": "node scripts/smoke.js",
+    "test:e2e": "node scripts/e2e-check.js",
+    "check:datasource": "node scripts/check-datasource.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<!-- 移动端适配：允许双指缩放图表，但输入框聚焦不触发页面缩放（字号 ≥16px 保证） -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="输入基金名称或代码，AI 按「总览 / 好业绩 / 好舵手 / 好体验 / 好时机与成本 / 风险排雷」六个角度输出结构化解读。内容由 AI 生成，不构成投资建议，不推荐基金。">
+<title>基金分析平台 · 六个角度看懂一只基金</title>
+<link rel="stylesheet" href="css/style.css">
+<script>
+  // 首屏渲染前应用主题，避免明暗切换闪烁
+  (function () {
+    try {
+      var t = localStorage.getItem('fap_theme');
+      if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+      if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <span class="logo"><i class="logo__mark"></i>基金分析平台</span>
+    <span class="topbar__spacer"></span>
+    <a class="topbar__link" href="rules.html">评分口径</a>
+    <a class="topbar__link" href="#recent-reports">历史报告</a>
+    <button class="topbar__link" id="btn-watchlist" type="button">我的自选 <span id="watch-count" class="tag">0</span></button>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换明暗主题" title="切换明暗主题">☾</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <h1>帮你快速看懂一只基金</h1>
+    <p>输入基金名称或代码，AI 依据公开数据给出结构化解读 · 不推荐基金 · 不预测收益</p>
+
+    <div class="pillars">
+      <div class="pillar"><span class="pillar__n">01</span><div class="pillar__t">总览</div><div class="pillar__d">四刻度雷达 + 风险灯</div></div>
+      <div class="pillar"><span class="pillar__n">02</span><div class="pillar__t">好业绩</div><div class="pillar__d">赚不赚钱、超额从哪来</div></div>
+      <div class="pillar"><span class="pillar__n">03</span><div class="pillar__t">好舵手</div><div class="pillar__d">谁在管、任职多久、忙不忙</div></div>
+      <div class="pillar"><span class="pillar__n">04</span><div class="pillar__t">好体验</div><div class="pillar__d">跌多深、多久回本、能不能拿住</div></div>
+      <div class="pillar"><span class="pillar__n">05</span><div class="pillar__t">好时机与成本</div><div class="pillar__d">持仓贵不贵、要付多少费</div></div>
+      <div class="pillar"><span class="pillar__n">06</span><div class="pillar__t">风险排雷</div><div class="pillar__d">漂移、清盘、换人、集中度</div></div>
+    </div>
+
+    <div class="searchbox" id="searchbox">
+      <div class="searchbox__field">
+        <span class="searchbox__icon" aria-hidden="true">🔍</span>
+        <input id="q" type="search" inputmode="search" autocomplete="off" autocapitalize="off"
+               spellcheck="false" placeholder="基金名称 / 6 位代码 / 拼音首字母，如 白酒、161725、zsbj"
+               aria-label="基金搜索" aria-controls="suggest" aria-expanded="false">
+        <button class="btn-primary" id="btn-search" type="button">分析</button>
+      </div>
+
+      <!-- 移动端为全屏覆盖层，桌面端为输入框下方浮层 -->
+      <div class="suggest" id="suggest" role="listbox" aria-label="搜索结果">
+        <div class="suggest__head">
+          <input id="q-mobile" type="search" inputmode="search" autocomplete="off"
+                 style="flex:1;border:0;outline:0;background:transparent;font-size:16px;height:44px;color:inherit"
+                 placeholder="搜索基金" aria-label="基金搜索">
+          <button class="btn-ghost" id="btn-suggest-close" type="button">取消</button>
+        </div>
+        <div class="suggest__list" id="suggest-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="recent-wrap" class="hidden">
+    <div class="section-title">最近搜索<button class="clamp-toggle" id="btn-recent-clear" type="button" style="margin-left:auto">清除</button></div>
+    <div class="chips" id="recent-list"></div>
+  </section>
+
+  <section id="watchlist-wrap" class="hidden">
+    <div class="section-title">我的自选 <small>点击可直接分析</small></div>
+    <div class="chips" id="watchlist-list"></div>
+  </section>
+
+  <section>
+    <div class="section-title">热门基金 <small id="hot-note">按平台分析次数排序，不按收益率排序</small></div>
+    <div class="hot-grid" id="hot-list">
+      <div class="hot-item"><div class="skeleton w60"></div><div class="skeleton w40"></div></div>
+      <div class="hot-item"><div class="skeleton w60"></div><div class="skeleton w40"></div></div>
+      <div class="hot-item"><div class="skeleton w60"></div><div class="skeleton w40"></div></div>
+      <div class="hot-item"><div class="skeleton w60"></div><div class="skeleton w40"></div></div>
+    </div>
+  </section>
+
+  <section id="recent-reports">
+    <div class="section-title">最近生成的报告 <small>点击查看只读快照</small></div>
+    <div id="reports-list"></div>
+  </section>
+
+  <footer class="footer">
+    <b>免责声明</b><br>
+    <span id="disclaimer-text"></span>
+    <div style="margin-top:8px">
+      <span class="tag">AI 生成内容</span>
+      <span class="tag">不构成投资建议</span>
+      <span class="tag">不推荐基金 · 不销售基金</span>
+      <span class="tag">过往业绩不预示未来</span>
+    </div>
+  </footer>
+</main>
+
+<script src="js/common.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
