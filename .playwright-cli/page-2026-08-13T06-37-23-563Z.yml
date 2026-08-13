@@ -1,0 +1,32 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: 基金分析平台
+      - link "评分口径" [ref=e6] [cursor=pointer]:
+        - /url: rules.html
+      - button "历史报告" [ref=e7] [cursor=pointer]
+      - button "我的自选 0" [ref=e8] [cursor=pointer]:
+        - text: 我的自选
+        - generic [ref=e9]: "0"
+      - button "切换明暗主题" [ref=e10] [cursor=pointer]: ☾
+  - main [ref=e11]:
+    - generic [ref=e12]:
+      - heading "帮你快速看懂一只基金" [level=1] [ref=e13]
+      - paragraph [ref=e14]: 输入基金名称或代码，AI 依据公开数据给出结构化解读 · 不推荐基金 · 不预测收益
+      - generic [ref=e16]:
+        - generic [ref=e17]: 🔍
+        - searchbox "基金搜索" [ref=e18]
+        - button "分析" [ref=e19] [cursor=pointer]
+    - generic [ref=e20]:
+      - generic [ref=e22]:
+        - text: 热门基金
+        - generic [ref=e23]: 按平台分析次数排序，不按收益率排序
+      - button "查看全部 →" [ref=e25] [cursor=pointer]
+    - generic [ref=e26]:
+      - text: 免责声明
+      - text: 本平台所有内容由 AI 基于公开数据自动生成，仅供学习、研究与参考，不构成任何投资建议、基金推荐、要约或承诺。平台不销售基金、不提供购买渠道，不对任何基金作推荐或评级。基金过往业绩不预示其未来表现，基金管理人管理的其他基金业绩不构成对本基金业绩的保证。数据可能存在延迟或错误，持仓数据来自定期报告存在滞后，请以基金管理人公告与法律文件为准。投资有风险，决策请独立判断，风险自负。
+      - generic [ref=e27]:
+        - generic [ref=e28]: AI 生成内容
+        - generic [ref=e29]: 不构成投资建议
+        - generic [ref=e30]: 不推荐基金 · 不销售基金
+        - generic [ref=e31]: 过往业绩不预示未来
