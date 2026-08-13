@@ -137,7 +137,8 @@
       if (btn) btn.textContent = t === 'light' ? '☀' : '☾';
     };
     let cur = localStorage.getItem('fap_theme');
-    if (!cur) cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    // 默认暗色（赛博朋克风格），忽略系统偏好
+    if (!cur) cur = 'dark';
     apply(cur);
     if (btn) {
       btn.addEventListener('click', function () {

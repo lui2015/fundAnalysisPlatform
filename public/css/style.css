@@ -7,30 +7,34 @@
 :root {
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', Menlo, Consolas, monospace;
 
-  --c-bg: #0b1020;
-  --c-bg-2: #0e1428;
-  --c-surface: #141b30;
-  --c-surface-2: #1b2440;
-  --c-border: #253154;
-  --c-border-strong: #3a4a7a;
+  /* ===== 赛博朋克深色基底（默认主题） ===== */
+  --c-bg: #05060f;
+  --c-bg-2: #090d1c;
+  --c-surface: #0c1226;
+  --c-surface-2: #111b38;
+  --c-border: #1c2c52;
+  --c-border-strong: #2de2e6; /* 霓虹青边框 */
 
-  --c-text: #e8eefc;
-  --c-text-2: #9aabcd;
-  --c-text-3: #6b7ca3;
+  --c-text: #e8f9ff;
+  --c-text-2: #8fc1e6;
+  --c-text-3: #5d7ca3;
 
-  --c-brand: #4b8dff;
-  --c-brand-2: #7c5cff;
-  --c-brand-weak: rgba(75, 141, 255, 0.12);
+  /* 霓虹主色：青 + 品红 */
+  --c-brand: #00e5ff;
+  --c-brand-2: #ff2bd6;
+  --c-brand-weak: rgba(0, 229, 255, 0.12);
+  --glow-brand: 0 0 12px rgba(0, 229, 255, 0.55);
+  --glow-magenta: 0 0 12px rgba(255, 43, 214, 0.5);
 
-  /* A 股习惯：红涨绿跌 */
-  --c-up: #ff4d6a;
-  --c-down: #12c48b;
-  --c-warn: #ffb02e;
-  --c-risk-red: #ff4d6a;
-  --c-risk-yellow: #ffb02e;
-  --c-risk-green: #12c48b;
+  /* A 股习惯：红涨绿跌（霓虹化） */
+  --c-up: #ff3b6b;
+  --c-down: #00ff9d;
+  --c-warn: #ffb800;
+  --c-risk-red: #ff3b6b;
+  --c-risk-yellow: #ffb800;
+  --c-risk-green: #00ff9d;
 
-  --shadow-1: 0 2px 12px rgba(0, 0, 0, 0.25);
+  --shadow-1: 0 2px 16px rgba(0, 229, 255, 0.08), 0 0 0 1px rgba(45, 226, 230, 0.08);
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 14px;
@@ -70,11 +74,40 @@ body {
     'Microsoft YaHei', sans-serif;
   color: var(--c-text);
   background-color: var(--c-bg);
-  background-image:
-    radial-gradient(circle at 50% -10%, rgba(75, 141, 255, 0.14), transparent 55%),
-    radial-gradient(circle at 100% 0%, rgba(124, 92, 255, 0.1), transparent 45%);
-  background-attachment: fixed;
   padding-bottom: calc(76px + var(--safe-b)); /* 预留移动端底部操作栏 */
+}
+
+/* === 赛博朋克：深色下的霓虹网格 + 双色辉光（仅暗色生效，浅色不套用） === */
+:root:not([data-theme='light']) body {
+  background-image:
+    radial-gradient(circle at 12% -8%, rgba(0, 229, 255, 0.14), transparent 45%),
+    radial-gradient(circle at 92% 4%, rgba(255, 43, 214, 0.12), transparent 46%),
+    linear-gradient(rgba(45, 226, 230, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 226, 230, 0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 46px 46px, 46px 46px;
+  background-attachment: fixed;
+}
+
+:root:not([data-theme='light']) {
+  .logo__mark { box-shadow: 0 0 10px rgba(0, 229, 255, 0.6), 0 0 20px rgba(255, 43, 214, 0.3); }
+  .btn-primary { box-shadow: 0 0 16px rgba(0, 229, 255, 0.45); }
+  .btn-primary:hover { box-shadow: 0 0 24px rgba(0, 229, 255, 0.7); }
+  .btn-ghost:hover { border-color: var(--c-brand); box-shadow: 0 0 14px rgba(0, 229, 255, 0.35); }
+  .hero h1 { text-shadow: 0 0 22px rgba(0, 229, 255, 0.4); letter-spacing: 0.4px; }
+  .sec__title { text-shadow: 0 0 10px rgba(0, 229, 255, 0.25); }
+  .sec__n { box-shadow: 0 0 12px rgba(0, 229, 255, 0.28); }
+  .card { border-color: rgba(45, 226, 230, 0.22); }
+  .card:hover { border-color: var(--c-brand); box-shadow: 0 0 20px rgba(0, 229, 255, 0.16); }
+  .pillar { box-shadow: inset 0 0 0 1px rgba(45, 226, 230, 0.06); }
+  .navtab.active, .chart-tab.active, .sidenav.active { box-shadow: 0 0 14px rgba(0, 229, 255, 0.55); }
+  .navtab:hover, .chip:hover, .hot-item:hover, .report-item:hover { box-shadow: 0 0 12px rgba(0, 229, 255, 0.2); }
+  .topbar, .fundbar, .navtabs, .actionbar { border-color: rgba(45, 226, 230, 0.18); }
+  .sg-item:hover, .sg-item.active { box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.3); }
+  .hero h1::after {
+    content: ''; display: block; width: 64px; height: 3px; margin: 8px auto 0;
+    background: linear-gradient(90deg, var(--c-brand), var(--c-brand-2));
+    box-shadow: var(--glow-brand); border-radius: 2px;
+  }
 }
 
 a { color: var(--c-brand); text-decoration: none; }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- 移动端适配：允许双指缩放图表，但输入框聚焦不触发页面缩放（字号 ≥16px 保证） -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b1020">
+<meta name="theme-color" content="#05060f">
 <meta name="description" content="输入基金名称或代码，AI 按「总览 / 好业绩 / 好舵手 / 好体验 / 好时机与成本 / 风险排雷」六个角度输出结构化解读。内容由 AI 生成，不构成投资建议，不推荐基金。">
 <title>基金分析平台 · 六个角度看懂一只基金</title>
 <link rel="stylesheet" href="css/style.css">
@@ -12,8 +12,9 @@
   // 首屏渲染前应用主题，避免明暗切换闪烁
   (function () {
     try {
+      // 默认暗色（赛博朋克风格），忽略系统偏好；仅在用户曾手动切到浅色时跟随 localStorage
       var t = localStorage.getItem('fap_theme');
-      if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+      if (!t) t = 'dark';
       if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
     } catch (e) {}
   })();
