@@ -288,7 +288,7 @@
     // 更新两组筛选按钮状态
     [U.$('#hot-filters'), U.$('#hot-drawer-filters')].forEach(function ($c) {
       if (!$c) return;
-      U.$$c('.hot__filter', $c).forEach(function (b) {
+      U.$$('.hot__filter', $c).forEach(function (b) {
         b.classList.toggle('active', b.getAttribute('data-type') === hotType);
       });
     });
@@ -315,8 +315,7 @@
       buildFilters(U.$('#hot-drawer-filters'), '');
       applyHotFilter();
     } catch (e) {
-      console.error('[renderHot]', e.message, e.stack);
-      U.$('#hot-list').appendChild(el('div', { class: 'sg-empty', text: '热门列表暂不可用: ' + e.message }));
+      U.$('#hot-list').appendChild(el('div', { class: 'sg-empty', text: '热门列表暂不可用' }));
     }
   }
 
