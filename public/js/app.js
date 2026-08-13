@@ -315,7 +315,8 @@
       buildFilters(U.$('#hot-drawer-filters'), '');
       applyHotFilter();
     } catch (e) {
-      U.$('#hot-list').appendChild(el('div', { class: 'sg-empty', text: '热门列表暂不可用' }));
+      console.error('[renderHot]', e.message, e.stack);
+      U.$('#hot-list').appendChild(el('div', { class: 'sg-empty', text: '热门列表暂不可用: ' + e.message }));
     }
   }
 
