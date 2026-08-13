@@ -262,7 +262,7 @@
   var hotFilters = {};
   HOT_DIMS.forEach(function (d) { hotFilters[d.key] = []; });
   var hotAllData = [];
-  var HOT_PAGE_SIZE = 20;
+  var HOT_PAGE_SIZE = 24; // 3列 × 8行
   var hotPage = 1;
 
   /**
@@ -436,16 +436,14 @@
    */
   async function applyHotFilter() {
     buildFilters(U.$('#hot-filters'));
-
-    // 后端分页+筛选模式：重置到第1页并重新请求
-    hotPage = 1;
+    // 注意：不重置 hotPage，分页点击直接使用当前页码；筛选变化由调用方自行重置
     try {
       var r = await fetchHotPage();
       hotAllData = r.data || [];
       hotTotal = r.total || 0;
       renderHotList(hotAllData);
     } catch (e) {
-      // 筛选失败静默处理
+      // 失败静默处理
     }
   }
 
