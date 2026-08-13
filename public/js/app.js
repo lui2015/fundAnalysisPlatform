@@ -207,28 +207,6 @@
     wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  /* ------------------------- 热门 ------------------------- */
-  async function renderHot() {
-    const box = U.$('#hot-list');
-    try {
-      const r = await U.api('hot?limit=12');
-      U.clear(box);
-      (r.data || []).forEach(function (it) {
-        box.appendChild(el('button', {
-          class: 'hot-item', attrs: { type: 'button' },
-          on: { click: function () { go(it); } },
-        }, [
-          el('div', { class: 'hot-item__name', text: it.name || it.code }),
-          el('div', { class: 'hot-item__meta', text: it.code + (it.analyzedCount ? ' · 已分析 ' + it.analyzedCount + ' 次' : it.typeText ? ' · ' + it.typeText : '') }),
-        ]));
-      });
-      if (r.source) U.$('#hot-note').textContent = r.source === 'platform' ? '按平台分析次数排序' : '常见基金示例，不代表推荐';
-    } catch (e) {
-      U.clear(box);
-      box.appendChild(el('div', { class: 'sg-empty', text: '热门列表暂不可用' }));
-    }
-  }
-
   /* ------------------------- 历史报告 ------------------------- */
   async function renderReports() {
     const box = U.$('#reports-list');
@@ -263,6 +241,5 @@
   U.$('#disclaimer-text').textContent = U.DISCLAIMER_TEXT;
   renderRecent();
   renderWatchlist();
-  renderHot();
   renderReports();
 })();
