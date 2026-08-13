@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#05060f">
 <meta name="description" content="输入基金名称或代码，AI 按「总览 / 好业绩 / 好舵手 / 好体验 / 好时机与成本 / 风险排雷」六个角度输出结构化解读。内容由 AI 生成，不构成投资建议，不推荐基金。">
 <title>基金分析平台 · 六个角度看懂一只基金</title>
-<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="stylesheet" href="css/style.css?v=6">
 <script>
   // 首屏渲染前应用主题，避免明暗切换闪烁
   (function () {
@@ -77,23 +77,8 @@
       <div class="hot__filters" id="hot-filters"></div>
     </div>
     <div class="hot-grid" id="hot-list"></div>
-    <div class="hot__footer"><button class="btn-ghost btn-sm" id="btn-hot-all" type="button">查看全部 →</button></div>
+    <div class="hot__pagination" id="hot-pagination"></div>
   </section>
-
-  <!-- 热门基金「查看全部」侧拉面板 -->
-  <div class="drawer" id="hot-drawer" role="dialog" aria-modal="true">
-    <div class="drawer__overlay"></div>
-    <div class="drawer__panel">
-      <div class="drawer__head">
-        <h2 class="drawer__title">全部热门基金</h2>
-        <button class="drawer__close" id="btn-hot-close" type="button" aria-label="关闭">✕</button>
-      </div>
-      <div class="drawer__body" id="hot-drawer-body">
-        <div class="hot__filters" id="hot-drawer-filters"></div>
-        <div class="hot-grid hot-grid--dense" id="hot-drawer-list"></div>
-      </div>
-    </div>
-  </div>
 
   <footer class="footer">
     <b>免责声明</b><br>
@@ -119,7 +104,7 @@
   </div>
 </div>
 
-<script src="js/common.js?v=4"></script>
-<script src="js/app.js?v=4"></script>
+<script src="js/common.js?v=9"></script>
+<script src="js/app.js?v=10"></script>
 </body>
 </html>

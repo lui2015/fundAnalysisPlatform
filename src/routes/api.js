@@ -40,10 +40,24 @@ router.get('/search', async (req, res) => {
 
 /* ============================== 热门 ============================== */
 router.get('/hot', async (req, res) => {
-  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 12));
   try {
-    const r = await datasource.hot({ limit, type: req.query.type, sort: req.query.sort });
-    res.json({ ok: true, data: r.data || [], source: r.source, note: '按平台分析次数排序，不按收益率排序' });
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+    // 多维筛选参数
+    const filters = {};
+    ['asset', 'operation', 'strategy', 'region', 'theme'].forEach(function (k) {
+      if (req.query[k]) filters[k] = req.query[k].split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    });
+    const r = await datasource.hot({ type: req.query.type, sort: req.query.sort, page, pageSize, filters });
+    res.json({
+      ok: true,
+      data: r.data || [],
+      source: r.source,
+      total: r.total || 0,
+      page,
+      pageSize,
+      note: '按近1年收益率降序排列，全量缓存分页返回'
+    });
   } catch (e) {
     res.json({ ok: true, data: [], error: '热门列表暂不可用' });
   }

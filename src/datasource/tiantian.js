@@ -18,6 +18,8 @@ const cache = require('../utils/cache');
 const dates = require('../utils/dates');
 const { toNum, round } = require('../utils/num');
 const logger = require('../utils/logger');
+const fs = require('fs');
+const path = require('path');
 
 const MOB = 'https://fundmobapi.eastmoney.com/FundMNewApi';
 const MOB_PARAMS = 'deviceid=Wap&plat=Wap&product=EFund&version=2.0.0&appType=ttjj';
@@ -755,29 +757,169 @@ async function holdingValuation(stocks) {
 /* ============================== 热门 ============================== */
 
 /**
- * 热门基金榜（天天基金近1年收益率排行）
- * 按天缓存（TTL.HOT），客户端可按类型二次筛选
+ * FUNDTYPE 编码映射（天天基金 FundMNRank 接口返回数字编码）
  */
-async function hot(limit = 50) {
-  // 多取一些用于客户端按类型筛选，最多100条
-  const fetchSize = Math.min(Math.max(Number(limit) || 50, 50), 100);
-  const url = `${MOB}/FundMNRank?FundType=all&SortColumn=SYL_1N&Sort=desc&pageIndex=1&pageSize=${fetchSize}&${MOB_PARAMS}`;
-  try {
-    const json = await cache.wrap(`tt:hot:rankings`, cache.TTL.HOT, () => http.safeGetJson(url, { headers: REF_MOB }));
-    const rows = Array.isArray(json?.Datas) ? json.Datas : [];
-    if (!rows.length) throw new Error('热门榜为空');
-    return ok(
-      rows.slice(0, fetchSize).map((r) => ({
-        code: String(r.FCODE || ''),
-        name: String(r.SHORTNAME || ''),
-        typeText: String(r.FTYPE || ''),
-        company: String(r.JJGS || ''),
-      })),
-      'eastmoney:mobapi'
-    );
-  } catch (e) {
-    return fail(e, 'eastmoney:mobapi');
+const FUNDTYPE_MAP = {
+  '001': '股票型',
+  '002': '混合型',
+  '003': '债券型',
+  '004': '指数型',
+  '005': 'QDII',
+  '006': 'FOF',
+  '007': '货币型',
+  '008': '商品型',
+};
+
+/** 从 FUNDTYPE 编码获取文字类型 */
+function fundTypeLabel(code) {
+  return FUNDTYPE_MAP[String(code)] || String(code || '');
+}
+
+/**
+ * 多维度分类器 —— 基于天天基金公开接口字段做启发式打标
+ *
+ * 维度设计：
+ *   asset      底层资产（股票/债券/货币/商品/混合）
+ *   operation  运作方式（开放式/ETF/LOF/FOF/定开）
+ *   strategy   投资策略（主动管理/被动指数/量化增强）
+ *   region     地域（境内/QDII境外）
+ *   theme      赛道主题（消费/科技/医药/新能源/红利/军工等，从名称提取）
+ */
+function classifyFund(row) {
+  var ft = String(row.FUNDTYPE || '');
+  var bft = String(row.BFUNDTYPE || '');
+  var name = String(row.SHORTNAME || '');
+  var listExch = String(row.LISTTEXCH || '');
+  var feature = String(row.FEATURE || '');
+
+  // ---- 底层资产 ----
+  var asset = '混合';
+  if (ft === '001') asset = '股票';
+  else if (ft === '003') asset = '债券';
+  else if (ft === '007') asset = '货币';
+  else if (ft === '008') asset = '商品';
+  else if (ft === '002') {
+    if (/偏股|股票/.test(bft)) asset = '股票';
+    else if (/偏债|债券/.test(bft)) asset = '债券';
+    else asset = '混合';
   }
+
+  // ---- 运作方式 ----
+  var operation = '开放式';
+  if (listExch && listExch !== '--') {
+    operation = /701/.test(feature) ? 'ETF' : 'LOF';
+  }
+  if (ft === '006') operation = 'FOF';
+  if (/定开|定期开放|持有期|封闭/.test(name)) operation = '定开';
+
+  // ---- 投资策略 ----
+  var strategy = '主动管理';
+  if (ft === '004' || /指数|跟踪|标的/.test(bft) || /指数/.test(name)) strategy = '被动指数';
+  if (/量化|对冲|套利|CTA/.test(name)) strategy = '量化';
+
+  // ---- 地域 ----
+  var region = ft === '005' ? 'QDII' : '境内';
+
+  // ---- 赛道主题（从基金名称提取关键词） ----
+  var THEME_KEYWORDS = [
+    ['消费', /消费|食品|饮料|白酒|家电|零售|商贸|超市/],
+    ['科技', /科技|技术|信息|软件|互联网|计算机|半导体|芯片|电子/],
+    ['医药', /医药|医疗|健康|生物|创新药|中药|疫苗|器械/],
+    ['新能源', /新能源|光伏|风电|锂电|储能|电池|清洁能源/],
+    ['高端制造', /制造|工业|机械|装备|机器人|自动化|智能/],
+    ['金融地产', /金融|银行|证券|保险|地产|基建|建筑/],
+    ['红利', /红利|高股息|价值|低波|稳健/],
+    ['军工国防', /军工|国防|航天|航空|航海|核/],
+    ['资源周期', /资源|有色|煤炭|钢铁|化工|石油|天然气|材料/],
+    ['农业', /农业|养殖|畜牧|种业/],
+    ['港股', /港股|恒生|H股|沪港通|深港通/],
+    ['美股', /美股|纳斯达克|标普|道琼斯/],
+    ['全球配置', /全球|世界|国际|海外/],
+    ['债券纯债', /纯债|短债|长债|信用债|利率债|可转债/],
+  ];
+  var themes = [];
+  for (var ti = 0; ti < THEME_KEYWORDS.length; ti++) {
+    if (THEME_KEYWORDS[ti][1].test(name)) themes.push(THEME_KEYWORDS[ti][0]);
+  }
+  if (!themes.length && !['货币'].includes(asset)) themes.push(asset);
+
+  return { asset: asset, operation: operation, strategy: strategy, region: region, themes: themes };
+}
+
+/**
+ * 热门基金榜（天天基金近1年收益率排行）
+ * 分页循环获取全量基金数据，按近1年收益率降序排列
+ * 注意：FundMNRank API 每页固定返回30条，Total 约24000+，需分页约800+次
+ * 使用文件持久化缓存 + 内存双层缓存，避免重启后重拉
+ */
+async function hot() {
+  var PER_PAGE = 30; // API 固定每页返回30条
+  var MAX_PAGES = 900; // 上限900页（约2.7万只），覆盖全部基金
+  var CACHE_FILE = path.join(process.cwd(), '.cache', 'hot_full.json');
+  var CACHE_TTL_MS = cache.TTL.HOT * 1000; // 与内存缓存 TTL 一致
+
+  // 1️⃣ 尝试从文件缓存加载（优先级最高，重启后立即可用）
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      var stat = fs.statSync(CACHE_FILE);
+      var age = Date.now() - stat.mtimeMs;
+      if (age < CACHE_TTL_MS) {
+        var fileData = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
+        logger.info('热门榜从文件缓存加载', { count: fileData.length, ageMs: Math.round(age) });
+        return ok(fileData, 'eastmoney:mobapi:file-cache');
+      }
+    }
+  } catch (e) {
+    logger.warn('热门榜文件缓存读取失败', { error: e.message });
+  }
+
+  // 2️⃣ 文件缓存未命中或已过期，分页拉取全量数据
+  var allRows = [];
+  for (var page = 1; page <= MAX_PAGES; page++) {
+    var url = MOB + '/FundMNRank?FundType=all&SortColumn=SYL_1N&Sort=desc&pageIndex=' + page + '&pageSize=' + PER_PAGE + '&' + MOB_PARAMS;
+    try {
+      var json = await http.safeGetJson(url, { headers: REF_MOB });
+      var rows = Array.isArray(json && json.Datas) ? json.Datas : [];
+      if (!rows.length) break;
+      allRows = allRows.concat(rows);
+      if (rows.length < PER_PAGE) break;
+    } catch (e) {
+      logger.warn('热门榜分页获取第' + page + '页失败', { error: e.message });
+      break;
+    }
+    if (page % 100 === 0) await new Promise(function (r) { setTimeout(r, 200); });
+  }
+
+  if (!allRows.length) throw new Error('热门榜为空');
+
+  var result = allRows.map(function (r) {
+    var cls = classifyFund(r);
+    return {
+      code: String(r.FCODE || ''),
+      name: String(r.SHORTNAME || ''),
+      typeText: fundTypeLabel(r.FUNDTYPE),
+      company: String(r.JJGS || ''),
+      return1y: toNum(r.SYL_1N),
+      returnSinceStart: toNum(r.SYL_LN),
+      asset: cls.asset,
+      operation: cls.operation,
+      strategy: cls.strategy,
+      region: cls.region,
+      themes: cls.themes,
+    };
+  });
+
+  // 3️⃣ 写入文件缓存（异步，不阻塞响应）
+  try {
+    var cacheDir = path.dirname(CACHE_FILE);
+    if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(result), 'utf-8');
+    logger.info('热门榜文件缓存已写入', { count: result.length, path: CACHE_FILE });
+  } catch (e) {
+    logger.warn('热门榜文件缓存写入失败', { error: e.message });
+  }
+
+  return ok(result, 'eastmoney:mobapi');
 }
 
 module.exports = {

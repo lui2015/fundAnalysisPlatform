@@ -244,86 +244,238 @@
     } catch (e) { /* 忽略 */ }
   }
 
-  /* ------------------------- 热门基金 ------------------------- */
-  const HOT_TYPES = [
-    { key: '', label: '全部' },
-    { key: '股票型', label: '股票型' },
-    { key: '混合型', label: '混合型' },
-    { key: '债券型', label: '债券型' },
-    { key: '指数型', label: '指数型' },
-    { key: 'QDII', label: 'QDII' },
-    { key: 'FOF', label: 'FOF' },
-    { key: '货币型', label: '货币型' },
-    { key: '商品型', label: '商品型' },
+  /* ------------------------- 热门基金（多维度筛选） ------------------------- */
+
+  /** 筛选维度定义 */
+  var HOT_DIMS = [
+    { key: 'asset', label: '底层资产', options: ['股票', '债券', '混合', '货币', '商品'] },
+    { key: 'operation', label: '运作方式', options: ['开放式', 'ETF', 'LOF', 'FOF', '定开'] },
+    { key: 'strategy', label: '投资策略', options: ['主动管理', '被动指数', '量化'] },
+    { key: 'region', label: '地域', options: ['境内', 'QDII'] },
+    { key: 'theme', label: '赛道主题', options: [
+      '消费', '科技', '医药', '新能源', '高端制造', '金融地产',
+      '红利', '军工国防', '资源周期', '农业', '港股', '美股', '全球配置', '债券纯债',
+    ]},
   ];
 
-  let hotType = '';
-  let hotAllData = []; // 缓存全量数据用于客户端筛选
+  // 每个维度的已选项（key → 已选值数组，空数组=不限）
+  var hotFilters = {};
+  HOT_DIMS.forEach(function (d) { hotFilters[d.key] = []; });
+  var hotAllData = [];
+  var HOT_PAGE_SIZE = 20;
+  var hotPage = 1;
 
-  function buildFilters(container, activeKey) {
+  /**
+   * 构建所有筛选下拉框
+   * 每个维度一个「标签 ▾」触发器 + 多选 checkbox 面板
+   */
+  function buildFilters(container) {
+    if (!container) return;
     U.clear(container);
-    HOT_TYPES.forEach(function (t) {
-      container.appendChild(el('button', {
-        class: 'hot__filter' + (t.key === activeKey ? ' active' : ''),
-        attrs: { type: 'button', 'data-type': t.key },
-        on: { click: function () { hotType = t.key; applyHotFilter(); } },
-        text: t.label,
-      }));
+    var wrap = el('div', { class: 'hot__dims' });
+
+    HOT_DIMS.forEach(function (dim) {
+      var selected = hotFilters[dim.key] || [];
+      var btnText = selected.length === 0 ? dim.label : dim.label + '(' + selected.length + ')';
+      var $btn = el('button', {
+        class: 'hot__dim-trigger' + (selected.length > 0 ? ' has-value' : ''),
+        attrs: { type: 'button' },
+        on: { click: function (e) { e.stopPropagation(); toggleDimPanel(wrap, dim.key); } },
+      }, [
+        el('span', { class: 'hot__dim-label', text: btnText }),
+        el('span', { class: 'hot__dim-arrow', text: '▾' }),
+      ]);
+
+      var $panel = el('div', { class: 'hot__dim-panel', attrs: { 'data-dim': dim.key } }, [
+        el('label', { class: 'hot__dim-opt' }, [
+          el('input', { attrs: { type: 'checkbox', checked: selected.length === 0, 'data-val': '__all__' } }),
+          el('span', { text: '全部（不限）' }),
+        ]),
+        el('div', { class: 'hot__dim-divider' }),
+      ]);
+      dim.options.forEach(function (opt) {
+        $panel.appendChild(el('label', { class: 'hot__dim-opt' }, [
+          el('input', { attrs: { type: 'checkbox', checked: selected.indexOf(opt) >= 0, 'data-val': opt } }),
+          el('span', { text: opt }),
+        ]));
+      });
+
+      wrap.appendChild($btn);
+      wrap.appendChild($panel);
+
+      // change 委托
+      $panel.addEventListener('change', function (ev) {
+        if (ev.target.type !== 'checkbox') return;
+        var val = ev.target.getAttribute('data-val');
+        if (val === '__all__') {
+          hotFilters[dim.key] = [];
+        } else {
+          var arr = hotFilters[dim.key] || [];
+          var idx = arr.indexOf(val);
+          if (idx >= 0) arr.splice(idx, 1); else arr.push(val);
+          hotFilters[dim.key] = arr;
+        }
+        closeAllDimPanels();
+        hotPage = 1;
+        buildFilters(U.$('#hot-filters'));
+        applyHotFilter();
+      });
     });
+
+    container.appendChild(wrap);
+    // 点击外部关闭
+    document.addEventListener('click', function () { closeAllDimPanels(); }, true);
+  }
+
+  function toggleDimPanel(wrap, dimKey) {
+    var wasOpen = false;
+    wrap.querySelectorAll('.hot__dim-panel').forEach(function (p) {
+      if (p.getAttribute('data-dim') === dimKey) {
+        wasOpen = p.classList.contains('open');
+        p.classList.toggle('open');
+      } else {
+        p.classList.remove('open');
+      }
+    });
+    wrap.querySelectorAll('.hot__dim-arrow').forEach(function (a, i) {
+      var panel = wrap.querySelectorAll('.hot__dim-panel')[i];
+      if (!panel) return;
+      a.style.transform = panel.getAttribute('data-dim') === dimKey && !wasOpen ? 'rotate(180deg)' : '';
+    });
+  }
+
+  /** 渲染热门基金列表（后端分页数据） */
+  function renderHotList(data) {
+    var $grid = U.$('#hot-list');
+    if (!$grid) return;
+    U.clear($grid);
+    (data || []).forEach(function (it) { $grid.appendChild(hotCardNode(it)); });
+    buildPagination(U.$('#hot-pagination'), hotTotal, hotPage, HOT_PAGE_SIZE);
+  }
+
+  function closeAllDimPanels() {
+    document.querySelectorAll('.hot__dim-panel.open').forEach(function (p) { p.classList.remove('open'); });
+    document.querySelectorAll('.hot__dim-arrow').forEach(function (a) { a.style.transform = ''; });
+  }
+
+  /** 分页控件（不变） */
+  function buildPagination(container, total, page, pageSize) {
+    if (!container) return;
+    U.clear(container);
+    var totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (totalPages <= 1) { container.style.display = 'none'; return; }
+    container.style.display = '';
+
+    // 上一页
+    container.appendChild(el('button', {
+      class: 'hot__page-btn' + (page <= 1 ? ' disabled' : ''),
+      attrs: { type: 'button', disabled: page <= 1 },
+      on: { click: function () { if (page > 1) { hotPage = page - 1; applyHotFilter(); } } },
+      text: '‹',
+    }));
+
+    // 页码（最多显示7个，省略号）
+    var pages = [];
+    if (totalPages <= 7) { for (var i = 1; i <= totalPages; i++) pages.push(i); }
+    else {
+      pages.push(1);
+      if (page > 3) pages.push('...');
+      for (var s = Math.max(2, page - 1), e = Math.min(totalPages - 1, page + 1); s <= e; s++) pages.push(s);
+      if (page < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    pages.forEach(function (p) {
+      if (p === '...') {
+        container.appendChild(el('span', { class: 'hot__page-ellipsis', text: '…' }));
+      } else {
+        container.appendChild(el('button', {
+          class: 'hot__page-btn' + (p === page ? ' active' : ''),
+          attrs: { type: 'button' },
+          on: { click: function () { hotPage = p; applyHotFilter(); } },
+          text: String(p),
+        }));
+      }
+    });
+
+    // 下一页
+    container.appendChild(el('button', {
+      class: 'hot__page-btn' + (page >= totalPages ? ' disabled' : ''),
+      attrs: { type: 'button', disabled: page >= totalPages },
+      on: { click: function () { if (page < totalPages) { hotPage = page + 1; applyHotFilter(); } } },
+      text: '›',
+    }));
+
+    // 总数提示
+    container.appendChild(el('span', { class: 'hot__page-info', text: '共 ' + total + ' 只' }));
   }
 
   /** 渲染单个热门卡片 */
   function hotCardNode(it) {
-    return el('a', {
-      class: 'hot-card',
-      attrs: { href: 'report.html?code=' + encodeURIComponent(it.code) + '&name=' + encodeURIComponent(it.name || '') },
-    }, [
+    var children = [
       el('span', { class: 'hot-card__name', text: it.name || it.code }),
       el('span', { class: 'hot-card__meta', text: it.code }),
       it.typeText ? el('span', { class: 'hot-card__tag', text: it.typeText }) : null,
-    ].filter(Boolean));
+    ];
+    // 成立来年化收益率
+    if (it.returnSinceStart != null) {
+      var val = it.returnSinceStart;
+      children.push(el('span', {
+        class: 'hot-card__return' + (val >= 0 ? ' is-up' : ' is-down'),
+        text: (val >= 0 ? '+' : '') + val.toFixed(2) + '%',
+      }));
+    }
+    return el('a', {
+      class: 'hot-card',
+      attrs: { href: 'report.html?code=' + encodeURIComponent(it.code) + '&name=' + encodeURIComponent(it.name || '') },
+    }, children.filter(Boolean));
   }
 
-  function applyHotFilter() {
-    // 更新两组筛选按钮状态
-    [U.$('#hot-filters'), U.$('#hot-drawer-filters')].forEach(function ($c) {
-      if (!$c) return;
-      U.$$('.hot__filter', $c).forEach(function (b) {
-        b.classList.toggle('active', b.getAttribute('data-type') === hotType);
-      });
+  /**
+   * 多维度筛选：每个维度内部 OR，维度之间 AND
+   * 例如：底层资产=股票|混合 AND 运作方式=ETF AND 赛道=科技
+   */
+  async function applyHotFilter() {
+    buildFilters(U.$('#hot-filters'));
+
+    // 后端分页+筛选模式：重置到第1页并重新请求
+    hotPage = 1;
+    try {
+      var r = await fetchHotPage();
+      hotAllData = r.data || [];
+      hotTotal = r.total || 0;
+      renderHotList(hotAllData);
+    } catch (e) {
+      // 筛选失败静默处理
+    }
+  }
+
+  // 后端分页：从服务端获取指定页数据
+  var hotTotal = 0;
+  async function fetchHotPage() {
+    var params = 'page=' + hotPage + '&pageSize=' + HOT_PAGE_SIZE;
+    // 收集当前筛选条件
+    var hasFilter = false;
+    HOT_DIMS.forEach(function (d) {
+      if (hotFilters[d.key] && hotFilters[d.key].length > 0) {
+        params += '&' + d.key + '=' + encodeURIComponent(hotFilters[d.key].join(','));
+        hasFilter = true;
+      }
     });
-
-    var filtered = hotType
-      ? hotAllData.filter(function (f) { return (f.typeText || '').includes(hotType); })
-      : hotAllData;
-
-    // 首页网格（最多8个）
-    var $grid = U.$('#hot-list');
-    U.clear($grid);
-    filtered.slice(0, 8).forEach(function (it) { $grid.appendChild(hotCardNode(it)); });
-
-    // 侧拉面板网格（全部）
-    var $dGrid = U.$('#hot-drawer-list');
-    if ($dGrid) { U.clear($dGrid); filtered.forEach(function (it) { $dGrid.appendChild(hotCardNode(it)); }); }
+    var r = await U.api('hot?' + params);
+    return r;
   }
 
   async function renderHot() {
     try {
-      var r = await U.api('hot?limit=50');
+      var r = await fetchHotPage();
       hotAllData = r.data || [];
-      buildFilters(U.$('#hot-filters'), '');
-      buildFilters(U.$('#hot-drawer-filters'), '');
-      applyHotFilter();
+      hotTotal = r.total || 0;
+      buildFilters(U.$('#hot-filters'));
+      renderHotList(hotAllData);
     } catch (e) {
       U.$('#hot-list').appendChild(el('div', { class: 'sg-empty', text: '热门列表暂不可用' }));
     }
   }
-
-  // 查看全部侧拉面板
-  var $hotDrawer = U.$('#hot-drawer');
-  U.$('#btn-hot-all').addEventListener('click', function () { $hotDrawer.classList.add('open'); });
-  U.$('#btn-hot-close').addEventListener('click', function () { $hotDrawer.classList.remove('open'); });
-  $hotDrawer && $hotDrawer.querySelector('.drawer__overlay').addEventListener('click', function () { $hotDrawer.classList.remove('open'); });
 
   /* ------------------------- 初始化 ------------------------- */
   U.initTheme();

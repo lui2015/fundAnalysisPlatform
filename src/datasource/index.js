@@ -67,21 +67,43 @@ async function search(query, limit = 8) {
 
 /* ============================== 热门 ============================== */
 
-/** 热门基金列表（支持按类型筛选与排序） */
+/** 热门基金列表（全量缓存，后端分页+筛选返回） */
 async function hot(opts = {}) {
-  const limit = Math.min(Number(opts.limit) || 12, 50);
   const type = (opts.type || '').trim();
   const sort = (opts.sort || '').trim(); // 'count' | 'name'
+  const page = Math.max(1, opts.page || 1);
+  const pageSize = Math.min(100, Math.max(1, opts.pageSize || 20));
+  const filters = opts.filters || {}; // { asset:[], operation:[], strategy:[], region:[], theme:[] }
 
-  // 1️⃣ 优先：天天基金排行接口（按近1年收益率排序，代表市场热度）
+  // 1️⃣ 优先：天天基金排行接口（按近1年收益率排序，全量获取并缓存）
   if (MODE !== 'mock') {
     try {
-      const r = await tiantian.hot(Math.max(limit, 50)); // 多取用于客户端筛选
-      if (r.ok && r.data.length >= Math.min(6, limit)) {
+      const r = await tiantian.hot();
+      if (r.ok && r.data.length >= 6) {
         let data = r.data;
+        // 类型筛选
         if (type) data = data.filter((f) => (f.typeText || '').includes(type));
+        // 多维筛选：维度间 AND，维度内 OR
+        var filterKeys = Object.keys(filters);
+        if (filterKeys.length > 0) {
+          data = data.filter(function (f) {
+            return filterKeys.every(function (k) {
+              var selected = filters[k] || [];
+              if (!selected.length) return true;
+              if (k === 'theme') {
+                // 赛道：匹配 themes 数组中任一
+                return selected.some(function (t) { return (f.themes || []).indexOf(t) >= 0; });
+              }
+              // 其他维度：直接匹配字段值
+              return selected.indexOf(String(f[k] || '')) >= 0;
+            });
+          });
+        }
         if (sort === 'name') data.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh'));
-        return { data: data.slice(0, limit), source: r.source };
+        const total = data.length;
+        const start = (page - 1) * pageSize;
+        const paged = data.slice(start, start + pageSize);
+        return { data: paged, total, source: r.source };
       }
     } catch (e) {
       logger.warn('天天基金热门榜获取失败，尝试本地数据源', { error: e.message });
@@ -91,7 +113,7 @@ async function hot(opts = {}) {
   // 2️⃣ 次选：平台分析次数统计
   try {
     const db = require('../db');
-    let rows = db.hotByAnalysisCount(limit * 3);
+    let rows = db.hotByAnalysisCount(200);
     if (rows.length >= Math.min(6, limit)) {
       let data = rows.map((r) => ({ code: r.code, name: r.name, analyzedCount: r.count }));
       if (type) data = data.filter((f) => f.name && f.name.includes(type));
