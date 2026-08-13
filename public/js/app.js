@@ -237,7 +237,6 @@
 
   /* ------------------------- 初始化 ------------------------- */
   U.initTheme();
-  U.ensureDisclaimer();
   U.$('#disclaimer-text').textContent = U.DISCLAIMER_TEXT;
   renderRecent();
   renderWatchlist();
