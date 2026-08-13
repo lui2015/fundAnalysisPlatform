@@ -27,7 +27,7 @@
     <span class="logo"><i class="logo__mark"></i>基金分析平台</span>
     <span class="topbar__spacer"></span>
     <a class="topbar__link" href="rules.html">评分口径</a>
-    <a class="topbar__link" href="#recent-reports">历史报告</a>
+    <button class="topbar__link" id="btn-history" type="button">历史报告</button>
     <button class="topbar__link" id="btn-watchlist" type="button">我的自选 <span id="watch-count" class="tag">0</span></button>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换明暗主题" title="切换明暗主题">☾</button>
   </div>
@@ -71,11 +71,6 @@
     <div class="chips" id="watchlist-list"></div>
   </section>
 
-  <section id="recent-reports">
-    <div class="section-title">最近生成的报告 <small>点击查看只读快照</small></div>
-    <div id="reports-list"></div>
-  </section>
-
   <footer class="footer">
     <b>免责声明</b><br>
     <span id="disclaimer-text"></span>
@@ -87,6 +82,18 @@
     </div>
   </footer>
 </main>
+
+<!-- 历史报告侧拉面板 -->
+<div class="drawer" id="history-drawer" role="dialog" aria-modal="true">
+  <div class="drawer__overlay"></div>
+  <div class="drawer__panel">
+    <div class="drawer__head">
+      <h2 class="drawer__title">历史报告 <small>点击查看只读快照</small></h2>
+      <button class="drawer__close" id="btn-history-close" type="button" aria-label="关闭">✕</button>
+    </div>
+    <div class="drawer__body" id="history-list"></div>
+  </div>
+</div>
 
 <script src="js/common.js"></script>
 <script src="js/app.js"></script>

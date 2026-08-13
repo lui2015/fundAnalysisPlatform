@@ -207,20 +207,29 @@
     wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  /* ------------------------- 历史报告 ------------------------- */
+  /* ------------------------- 历史报告（侧拉面板） ------------------------- */
+  const $drawer = U.$('#history-drawer');
+  const $historyList = U.$('#history-list');
+
+  function openHistory() { $drawer.classList.add('open'); }
+  function closeHistory() { $drawer.classList.remove('open'); }
+
+  U.$('#btn-history').addEventListener('click', openHistory);
+  U.$('#btn-history-close').addEventListener('click', closeHistory);
+  $drawer.querySelector('.drawer__overlay').addEventListener('click', closeHistory);
+
   async function renderReports() {
-    const box = U.$('#reports-list');
     try {
       const r = await U.api('reports?limit=10');
-      U.clear(box);
+      U.clear($historyList);
       const list = r.data || [];
       if (!list.length) {
-        box.appendChild(el('div', { class: 'sg-empty', text: '还没有生成过报告，搜索一只基金开始吧' }));
+        $historyList.appendChild(el('div', { class: 'sg-empty', text: '还没有生成过报告，搜索一只基金开始吧' }));
         return;
       }
       list.forEach(function (it) {
         const s = it.scores || {};
-        box.appendChild(el('a', { class: 'report-item', attrs: { href: 'report.html?id=' + it.id } }, [
+        $historyList.appendChild(el('a', { class: 'report-item', attrs: { href: 'report.html?id=' + it.id } }, [
           el('div', { style: { flex: '1', minWidth: '0' } }, [
             el('div', { style: { fontSize: '14px', fontWeight: '600' }, text: it.name || it.code }),
             el('div', { style: { fontSize: '11px', color: 'var(--c-text-3)', marginTop: '2px' },
