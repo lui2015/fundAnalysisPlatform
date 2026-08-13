@@ -71,6 +71,30 @@
     <div class="chips" id="watchlist-list"></div>
   </section>
 
+  <section id="hot-section">
+    <div class="hot__header">
+      <div class="section-title">热门基金 <small>按平台分析次数排序，不按收益率排序</small></div>
+      <div class="hot__filters" id="hot-filters"></div>
+    </div>
+    <div class="hot-grid" id="hot-list"></div>
+    <div class="hot__footer"><button class="btn-ghost btn-sm" id="btn-hot-all" type="button">查看全部 →</button></div>
+  </section>
+
+  <!-- 热门基金「查看全部」侧拉面板 -->
+  <div class="drawer" id="hot-drawer" role="dialog" aria-modal="true">
+    <div class="drawer__overlay"></div>
+    <div class="drawer__panel">
+      <div class="drawer__head">
+        <h2 class="drawer__title">全部热门基金</h2>
+        <button class="drawer__close" id="btn-hot-close" type="button" aria-label="关闭">✕</button>
+      </div>
+      <div class="drawer__body" id="hot-drawer-body">
+        <div class="hot__filters" id="hot-drawer-filters"></div>
+        <div class="hot-grid hot-grid--dense" id="hot-drawer-list"></div>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">
     <b>免责声明</b><br>
     <span id="disclaimer-text"></span>

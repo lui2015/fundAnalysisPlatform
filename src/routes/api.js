@@ -40,9 +40,9 @@ router.get('/search', async (req, res) => {
 
 /* ============================== 热门 ============================== */
 router.get('/hot', async (req, res) => {
-  const limit = Math.min(24, Math.max(1, parseInt(req.query.limit, 10) || 12));
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 12));
   try {
-    const r = await datasource.hot(limit);
+    const r = await datasource.hot({ limit, type: req.query.type, sort: req.query.sort });
     res.json({ ok: true, data: r.data || [], source: r.source, note: '按平台分析次数排序，不按收益率排序' });
   } catch (e) {
     res.json({ ok: true, data: [], error: '热门列表暂不可用' });

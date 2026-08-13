@@ -67,19 +67,32 @@ async function search(query, limit = 8) {
 
 /* ============================== 热门 ============================== */
 
-async function hot(limit = 12) {
-  // 平台分析次数优先（不按收益率排序，F1-9）
+/** 热门基金列表（支持按类型筛选与排序） */
+async function hot(opts = {}) {
+  const limit = Math.min(Number(opts.limit) || 12, 50);
+  const type = (opts.type || '').trim();
+  const sort = (opts.sort || '').trim(); // 'count' | 'name'
+
   try {
     const db = require('../db');
-    const rows = db.hotByAnalysisCount(limit);
+    let rows = db.hotByAnalysisCount(limit * 3); // 多取一些用于筛选
     if (rows.length >= Math.min(6, limit)) {
-      return { data: rows.map((r) => ({ code: r.code, name: r.name, analyzedCount: r.count })), source: 'platform' };
+      let data = rows.map((r) => ({ code: r.code, name: r.name, analyzedCount: r.count }));
+      if (type) data = data.filter((f) => f.name && f.name.includes(type));
+      if (sort === 'name') data.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh'));
+      return { data: data.slice(0, limit), source: 'platform' };
     }
   } catch (e) {
     logger.warn('热门统计读取失败', { error: e.message });
   }
-  const local = dict.all().slice(0, limit).map((f) => ({ code: f.code, name: f.name, typeText: f.typeText, company: f.company }));
-  return { data: local, source: 'local-dict' };
+
+  // 回退到本地字典
+  let local = dict.all().slice(0, limit * 2).map((f) => ({
+    code: f.code, name: f.name, typeText: f.typeText, company: f.company,
+  }));
+  if (type) local = local.filter((f) => (f.typeText || '').includes(type));
+  if (sort === 'name') local.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh'));
+  return { data: local.slice(0, limit), source: 'local-dict' };
 }
 
 /* ========================= 单项工具 ========================= */
