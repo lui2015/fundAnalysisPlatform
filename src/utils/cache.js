@@ -55,7 +55,7 @@ const TTL = {
   NOTICE: 30 * 60 * 1000, // 公告 ≤30min
   MARKET: 5 * 60 * 1000,
   ONMARKET: 60 * 1000, // 场内实时行情/折溢价
-  HOT: 5 * 60 * 1000,
+  HOT: 24 * 60 * 60 * 1000, // 热门榜 24h（天天基金排行，每日刷新）
 };
 
 module.exports = { set, get, wrap, stats, clear, TTL };

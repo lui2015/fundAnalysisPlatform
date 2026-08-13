@@ -73,9 +73,25 @@ async function hot(opts = {}) {
   const type = (opts.type || '').trim();
   const sort = (opts.sort || '').trim(); // 'count' | 'name'
 
+  // 1️⃣ 优先：天天基金排行接口（按近1年收益率排序，代表市场热度）
+  if (MODE !== 'mock') {
+    try {
+      const r = await tiantian.hot(Math.max(limit, 50)); // 多取用于客户端筛选
+      if (r.ok && r.data.length >= Math.min(6, limit)) {
+        let data = r.data;
+        if (type) data = data.filter((f) => (f.typeText || '').includes(type));
+        if (sort === 'name') data.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh'));
+        return { data: data.slice(0, limit), source: r.source };
+      }
+    } catch (e) {
+      logger.warn('天天基金热门榜获取失败，尝试本地数据源', { error: e.message });
+    }
+  }
+
+  // 2️⃣ 次选：平台分析次数统计
   try {
     const db = require('../db');
-    let rows = db.hotByAnalysisCount(limit * 3); // 多取一些用于筛选
+    let rows = db.hotByAnalysisCount(limit * 3);
     if (rows.length >= Math.min(6, limit)) {
       let data = rows.map((r) => ({ code: r.code, name: r.name, analyzedCount: r.count }));
       if (type) data = data.filter((f) => f.name && f.name.includes(type));
@@ -86,7 +102,7 @@ async function hot(opts = {}) {
     logger.warn('热门统计读取失败', { error: e.message });
   }
 
-  // 回退到本地字典
+  // 3️⃣ 兜底：内置字典
   let local = dict.all().slice(0, limit * 2).map((f) => ({
     code: f.code, name: f.name, typeText: f.typeText, company: f.company,
   }));

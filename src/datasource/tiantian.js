@@ -754,15 +754,20 @@ async function holdingValuation(stocks) {
 
 /* ============================== 热门 ============================== */
 
-async function hot(limit = 12) {
-  // 用「同类关注度」榜单替代收益率榜单，避免变成收益排行榜（F1-9）
-  const url = `${MOB}/FundMNRank?FundType=all&SortColumn=SYL_1N&Sort=desc&pageIndex=1&pageSize=${limit}&${MOB_PARAMS}`;
+/**
+ * 热门基金榜（天天基金近1年收益率排行）
+ * 按天缓存（TTL.HOT），客户端可按类型二次筛选
+ */
+async function hot(limit = 50) {
+  // 多取一些用于客户端按类型筛选，最多100条
+  const fetchSize = Math.min(Math.max(Number(limit) || 50, 50), 100);
+  const url = `${MOB}/FundMNRank?FundType=all&SortColumn=SYL_1N&Sort=desc&pageIndex=1&pageSize=${fetchSize}&${MOB_PARAMS}`;
   try {
-    const json = await cache.wrap(`tt:hot:${limit}`, cache.TTL.HOT, () => http.safeGetJson(url, { headers: REF_MOB }));
+    const json = await cache.wrap(`tt:hot:rankings`, cache.TTL.HOT, () => http.safeGetJson(url, { headers: REF_MOB }));
     const rows = Array.isArray(json?.Datas) ? json.Datas : [];
     if (!rows.length) throw new Error('热门榜为空');
     return ok(
-      rows.slice(0, limit).map((r) => ({
+      rows.slice(0, fetchSize).map((r) => ({
         code: String(r.FCODE || ''),
         name: String(r.SHORTNAME || ''),
         typeText: String(r.FTYPE || ''),
