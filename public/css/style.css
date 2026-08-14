@@ -256,6 +256,36 @@ button, .btn, .tap {
 .chip:hover { border-color: var(--c-brand); }
 .chip__x { color: var(--c-text-3); font-size: 15px; padding: 0 2px; min-height: auto; min-width: auto; background: none; border: 0; }
 
+/* 自选基金卡片 */
+#watchlist-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.watch-card {
+  position: relative; background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: var(--r-md); padding: 12px 14px; transition: border-color .2s;
+  display: flex; align-items: center; gap: 10px;
+}
+.watch-card:hover { border-color: var(--c-brand); }
+.watch-card__body { flex: 1; min-width: 0; }
+.watch-card__name {
+  display: block; width: 100%; background: none; border: 0; color: var(--c-text);
+  font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; padding: 0;
+  line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.watch-card__name:hover { color: var(--c-brand); }
+.watch-card__info { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.watch-card__code { color: var(--c-text-3); font-size: 12px; }
+.watch-card__sep { color: var(--c-border); font-size: 11px; }
+.watch-card__type {
+  font-size: 11px; color: var(--c-text-dim); background: rgba(var(--c-brand-rgb),.08);
+  padding: 1px 7px; border-radius: 999px; line-height: 1.4;
+}
+.watch-card__return { font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace; white-space: nowrap; flex-shrink: 0; }
+.watch-card__del {
+  background: none; border: 0; color: var(--c-text-3); font-size: 16px; cursor: pointer;
+  padding: 2px 4px; line-height: 1; flex-shrink: 0; opacity: 0; transition: opacity .15s;
+}
+.watch-card:hover .watch-card__del { opacity: 1; }
+.watch-card__del:hover { color: #ff5555; }
+
 .hot-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .hot-item {
   background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-md);
@@ -500,10 +530,16 @@ table.data td.num { font-family: var(--font-mono); }
 #hot-section { margin-top: 28px; }
 .hot__header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .hot__header .section-title { margin: 0; }
-.hot__filters { position: relative; }
+.hot__filters { position: relative; flex: 1; min-width: 0; }
 
-/* 多维度筛选容器 */
-.hot__dims { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
+/* 筛选行：按钮 + 搜索框始终同一行 */
+.hot__dims { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; }
+
+/* 每个维度：按钮+面板容器（面板绝对定位悬浮，不占布局空间） */
+.hot__dim-wrap {
+  position: relative;
+  flex: none;
+}
 
 /* 维度触发按钮 */
 .hot__dim-trigger {
@@ -520,11 +556,15 @@ table.data td.num { font-family: var(--font-mono); }
 }
 .hot__dim-arrow { font-size: 9px; color: inherit; transition: transform .2s; }
 
-/* 维度下拉面板 */
+/* 维度下拉面板（绝对定位悬浮在按钮下方，不顶开页面布局） */
 .hot__dim-panel {
-  display: none; position: absolute; top: 100%; left: 0; z-index: 200;
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
   min-width: 150px; max-height: 320px; overflow-y: auto;
-  padding: 6px 0; margin-top: 4px;
+  padding: 6px 0;
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: var(--r-sm); box-shadow: var(--shadow-lg);
 }
@@ -542,6 +582,25 @@ table.data td.num { font-family: var(--font-mono); }
   flex-shrink: 0;
 }
 .hot__dim-divider { height: 1px; background: var(--c-border); margin: 4px 0; }
+
+/* 搜索框（与筛选按钮同行，靠右，可收缩） */
+.hot__search-wrap {
+  margin-left: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.hot__search {
+  width: 100%; max-width: 200px; min-width: 110px;
+  height: 30px; padding: 0 10px;
+  border: 1px solid var(--c-border); border-radius: var(--r-sm);
+  background: var(--c-surface); color: var(--c-text);
+  font-size: 13px; outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.hot__search:focus {
+  border-color: var(--c-brand);
+  box-shadow: 0 0 0 2px rgba(var(--c-brand-rgb), .15);
+}
+.hot__search::placeholder { color: var(--c-text-dim); }
 
 .hot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
 .hot-grid--dense { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }

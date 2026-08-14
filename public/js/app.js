@@ -180,15 +180,46 @@
       U.clear(box);
       if (!list.length) { wrap.classList.add('hidden'); return; }
       wrap.classList.remove('hidden');
+
+      // 获取热门基金数据以补充收益率等信息
+      // 先批量拉取前100条，再对未命中的自选基金逐只用 keyword 精确查询
+      var hotData = {};
+      try {
+        var hr = await U.api('hot?page=1&pageSize=100');
+        (hr.data || []).forEach(function (f) { hotData[f.code] = f; });
+        // 对未在 top100 中的自选基金，用代码精确搜索补全
+        var missing = list.filter(function (it) { return !hotData[it.code]; });
+        for (var i = 0; i < missing.length; i++) {
+          try {
+            var mr = await U.api('hot?page=1&pageSize=5&keyword=' + encodeURIComponent(missing[i].code));
+            var found = (mr.data || []).find(function (f) { return f.code === missing[i].code; });
+            if (found) hotData[missing[i].code] = found;
+          } catch (_) {}
+        }
+      } catch (_) {}
+
       list.forEach(function (it) {
-        box.appendChild(el('span', { class: 'chip' }, [
+        var info = hotData[it.code] || {};
+        var ret = info.returnSinceStart;
+        var retText = typeof ret === 'number' ? (ret >= 0 ? '+' : '') + ret.toFixed(2) + '%' : '--';
+        var retCls = typeof ret === 'number' ? (ret >= 0 ? 'is-up' : 'is-down') : '';
+
+        box.appendChild(el('div', { class: 'watch-card' }, [
+          el('div', { class: 'watch-card__body' }, [
+            el('button', {
+              class: 'watch-card__name', attrs: { type: 'button' },
+              text: it.name || it.code,
+              on: { click: function () { go(it); } },
+            }),
+            el('div', { class: 'watch-card__info' }, [
+              el('span', { class: 'watch-card__code', text: it.code || '' }),
+              el('span', { class: 'watch-card__sep', text: '|' }),
+              el('span', { class: 'watch-card__type', text: info.typeText || '--' }),
+            ]),
+          ]),
+          el('span', { class: 'watch-card__return ' + retCls, text: retText }),
           el('button', {
-            class: 'clamp-toggle', attrs: { type: 'button' }, style: { color: 'inherit', fontSize: '13px' },
-            text: (it.name || it.code) + ' ',
-            on: { click: function () { go(it); } },
-          }),
-          el('button', {
-            class: 'chip__x', attrs: { type: 'button', 'aria-label': '移出自选' }, text: '×',
+            class: 'watch-card__del', attrs: { type: 'button', 'aria-label': '移出自选' }, text: '×',
             on: {
               click: async function (e) {
                 e.stopPropagation();
@@ -261,6 +292,7 @@
   // 每个维度的已选项（key → 已选值数组，空数组=不限）
   var hotFilters = {};
   HOT_DIMS.forEach(function (d) { hotFilters[d.key] = []; });
+  var hotSearchText = ''; // 模糊搜索关键词
   var hotAllData = [];
   var HOT_PAGE_SIZE = 24; // 3列 × 8行
   var hotPage = 1;
@@ -269,8 +301,16 @@
    * 构建所有筛选下拉框
    * 每个维度一个「标签 ▾」触发器 + 多选 checkbox 面板
    */
+  // 缓存面板 DOM 引用，避免重建
+  var _dimBtns = {}; // { key: $btn }
+  var _dimPanels = {}; // { key: $panel }
+  var _filtersBuilt = false; // 防止重复构建 DOM
+
   function buildFilters(container) {
     if (!container) return;
+    // 已构建过则跳过，避免重复追加 DOM
+    if (_filtersBuilt) return;
+    _filtersBuilt = true;
     U.clear(container);
     var wrap = el('div', { class: 'hot__dims' });
 
@@ -300,8 +340,14 @@
         ]));
       });
 
-      wrap.appendChild($btn);
-      wrap.appendChild($panel);
+      // 每个维度：按钮+面板包裹在同一容器中，面板在按钮正下方
+      var $wrap = el('div', { class: 'hot__dim-wrap' });
+      $wrap.appendChild($btn);
+      $wrap.appendChild($panel);
+      wrap.appendChild($wrap);
+
+      _dimBtns[dim.key] = $btn;
+      _dimPanels[dim.key] = $panel;
 
       // change 委托
       $panel.addEventListener('change', function (ev) {
@@ -309,23 +355,79 @@
         var val = ev.target.getAttribute('data-val');
         if (val === '__all__') {
           hotFilters[dim.key] = [];
+          // 重置所有 checkbox 状态
+          var cbs = $panel.querySelectorAll('input[type=checkbox]');
+          for (var i = 0; i < cbs.length; i++) cbs[i].checked = (i === 0);
         } else {
           var arr = hotFilters[dim.key] || [];
           var idx = arr.indexOf(val);
           if (idx >= 0) arr.splice(idx, 1); else arr.push(val);
           hotFilters[dim.key] = arr;
+          // 更新"全部" checkbox
+          var allCb = $panel.querySelector('input[data-val=__all__]');
+          if (allCb) allCb.checked = false;
         }
-        closeAllDimPanels();
+        // 只更新按钮文字，不重建 DOM
+        updateDimBtnText(dim.key);
         hotPage = 1;
-        buildFilters(U.$('#hot-filters'));
         applyHotFilter();
       });
     });
 
     container.appendChild(wrap);
-    // 点击外部关闭
-    document.addEventListener('click', function () { closeAllDimPanels(); }, true);
+
+    // 搜索框（放入 wrap 内，与筛选按钮同行）
+    var $search = el('input', {
+      class: 'hot__search',
+      attrs: {
+        type: 'text',
+        placeholder: '搜索基金名称/代码...',
+        value: hotSearchText,
+      },
+      on: {
+        input: function () {
+          hotSearchText = this.value.trim();
+          if (hotSearchTimer) clearTimeout(hotSearchTimer);
+          hotSearchTimer = setTimeout(function () {
+            hotPage = 1;
+            applyHotFilter();
+          }, 300);
+        },
+        keydown: function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (hotSearchTimer) clearTimeout(hotSearchTimer);
+            hotPage = 1;
+            applyHotFilter();
+          }
+        },
+      },
+    });
+    var $searchWrap = el('div', { class: 'hot__search-wrap' }, [$search]);
+    wrap.appendChild($searchWrap);
+
+    // 点击外部关闭：仅当点击目标不在任何筛选面板/触发按钮内时才关闭
+    document.addEventListener('click', function (ev) {
+      var t = ev.target;
+      if (t && t.closest && (t.closest('.hot__dim-panel') || t.closest('.hot__dim-trigger'))) return;
+      closeAllDimPanels();
+    });
   }
+
+  /** 仅更新按钮文字和样式，不重建 DOM */
+  function updateDimBtnText(key) {
+    var $btn = _dimBtns[key];
+    if (!$btn) return;
+    var dim = HOT_DIMS.find(function (d) { return d.key === key; });
+    if (!dim) return;
+    var selected = hotFilters[key] || [];
+    var btnText = selected.length === 0 ? dim.label : dim.label + '(' + selected.length + ')';
+    var labelEl = $btn.querySelector('.hot__dim-label');
+    if (labelEl) labelEl.textContent = btnText;
+    $btn.className = 'hot__dim-trigger' + (selected.length > 0 ? ' has-value' : '');
+  }
+
+  var hotSearchTimer = null;
 
   function toggleDimPanel(wrap, dimKey) {
     var wasOpen = false;
@@ -416,12 +518,17 @@
       el('span', { class: 'hot-card__meta', text: it.code }),
       it.typeText ? el('span', { class: 'hot-card__tag', text: it.typeText }) : null,
     ];
-    // 成立来年化收益率
+    // 成立来年化收益率（不足 1 年不年化，后端返回 null 时不展示）
     if (it.returnSinceStart != null) {
       var val = it.returnSinceStart;
+      var tip = '成立以来年化收益率';
+      if (it.returnSinceStartCum != null) tip += '（累计 ' + it.returnSinceStartCum.toFixed(2) + '%';
+      if (it.establishDate) tip += '，成立于 ' + it.establishDate;
+      if (it.returnSinceStartCum != null) tip += '）';
       children.push(el('span', {
         class: 'hot-card__return' + (val >= 0 ? ' is-up' : ' is-down'),
         text: (val >= 0 ? '+' : '') + val.toFixed(2) + '%',
+        attrs: { title: tip },
       }));
     }
     return el('a', {
@@ -435,8 +542,7 @@
    * 例如：底层资产=股票|混合 AND 运作方式=ETF AND 赛道=科技
    */
   async function applyHotFilter() {
-    buildFilters(U.$('#hot-filters'));
-    // 注意：不重置 hotPage，分页点击直接使用当前页码；筛选变化由调用方自行重置
+    // 筛选 DOM 只在 renderHot 首次构建，此处仅重新请求数据
     try {
       var r = await fetchHotPage();
       hotAllData = r.data || [];
@@ -459,6 +565,11 @@
         hasFilter = true;
       }
     });
+    // 搜索关键词
+    if (hotSearchText) {
+      params += '&keyword=' + encodeURIComponent(hotSearchText);
+      hasFilter = true;
+    }
     var r = await U.api('hot?' + params);
     return r;
   }

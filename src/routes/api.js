@@ -48,7 +48,9 @@ router.get('/hot', async (req, res) => {
     ['asset', 'operation', 'strategy', 'region', 'theme'].forEach(function (k) {
       if (req.query[k]) filters[k] = req.query[k].split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     });
-    const r = await datasource.hot({ type: req.query.type, sort: req.query.sort, page, pageSize, filters });
+    // 模糊搜索关键词（基金名称/代码）
+    const keyword = (req.query.keyword || '').trim();
+    const r = await datasource.hot({ type: req.query.type, sort: req.query.sort, page, pageSize, filters, keyword });
     res.json({
       ok: true,
       data: r.data || [],

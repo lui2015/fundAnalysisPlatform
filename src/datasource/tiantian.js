@@ -804,13 +804,14 @@ function classifyFund(row) {
     else asset = '混合';
   }
 
-  // ---- 运作方式 ----
+  // ---- 运作方式（按名称关键词判断，最可靠） ----
+  // ETF 基金名必含 "ETF"，LOF 基金名必含 "LOF"（含 (FOF-LOF) 等形式），
+  // 不依赖 feature 字段，彻底避免把场内 LOF/持有期基金误判为 ETF
   var operation = '开放式';
-  if (listExch && listExch !== '--') {
-    operation = /701/.test(feature) ? 'ETF' : 'LOF';
-  }
+  if (/ETF/i.test(name)) operation = 'ETF';
+  else if (/LOF/i.test(name)) operation = 'LOF';
   if (ft === '006') operation = 'FOF';
-  if (/定开|定期开放|持有期|封闭/.test(name)) operation = '定开';
+  if (/定开|定期开放|定期|持有期|持有|封闭|年定开/i.test(name)) operation = '定开';
 
   // ---- 投资策略 ----
   var strategy = '主动管理';
@@ -844,6 +845,52 @@ function classifyFund(row) {
   if (!themes.length && !['货币'].includes(asset)) themes.push(asset);
 
   return { asset: asset, operation: operation, strategy: strategy, region: region, themes: themes };
+}
+
+/**
+ * 批量获取全部开放式基金的成立日期
+ * FundMNRank 接口不返回成立日期，而年化收益必须依赖它，
+ * 因此改用天天基金排行接口（一次请求可取全部 2 万余只，字段以逗号分隔）：
+ *   索引 0 = 基金代码，15 = 成立以来累计收益率(%)，16 = 成立日期(YYYY-MM-DD)
+ * @returns {Promise<Object>} { code: establishDate }
+ */
+async function fetchEstablishDates() {
+  var url = 'https://fund.eastmoney.com/data/rankhandler.aspx'
+    + '?op=ph&dt=kf&ft=all&rs=&gs=0&sc=zzf&st=desc&pi=1&pn=25000&dx=1';
+  var text = await http.safeGetText(url, {
+    headers: { Referer: 'https://fund.eastmoney.com/data/fundranking.html' },
+    timeoutMs: 60000,
+  });
+  var map = {};
+  var m = text.match(/datas:\[([\s\S]*?)\],allRecords/);
+  if (!m) return map;
+  var rows = m[1].split('","');
+  for (var i = 0; i < rows.length; i++) {
+    var cols = rows[i].replace(/^"|"$/g, '').split(',');
+    var code = cols[0];
+    var establishDate = cols[16];
+    if (code && /^\d{4}-\d{2}-\d{2}$/.test(establishDate || '')) map[code] = establishDate;
+  }
+  return map;
+}
+
+/**
+ * 由「成立以来累计收益率」换算「成立以来年化收益率」
+ * 年化 = ((1 + 累计/100) ^ (1/存续年数) - 1) × 100
+ * 行业惯例：存续不足 1 年不做年化（避免把短期涨幅放大成夸张数字），返回 null
+ * @param {number|null} cumPct 成立以来累计收益率(%)
+ * @param {string} establishDate 成立日期 YYYY-MM-DD
+ * @returns {number|null} 年化收益率(%)，无法计算时返回 null
+ */
+function annualizeSinceStart(cumPct, establishDate) {
+  if (!isFinite(cumPct) || cumPct === null || !establishDate) return null;
+  var start = new Date(establishDate + 'T00:00:00Z').getTime();
+  if (!isFinite(start)) return null;
+  var years = (Date.now() - start) / (365.25 * 24 * 3600 * 1000);
+  if (!(years >= 1)) return null; // 不足 1 年不年化
+  var growth = 1 + cumPct / 100;
+  if (growth <= 0) return null; // 已亏光，年化无意义
+  return round((Math.pow(growth, 1 / years) - 1) * 100, 2);
 }
 
 /**
@@ -892,15 +939,29 @@ async function hot() {
 
   if (!allRows.length) throw new Error('热门榜为空');
 
+  // 补充成立日期，用于把「成立以来累计收益」换算成「成立以来年化收益」
+  var establishMap = {};
+  try {
+    establishMap = await fetchEstablishDates();
+    logger.info('成立日期映射获取完成', { count: Object.keys(establishMap).length });
+  } catch (e) {
+    logger.warn('成立日期获取失败，年化收益将为空', { error: e.message });
+  }
+
   var result = allRows.map(function (r) {
     var cls = classifyFund(r);
+    var code = String(r.FCODE || '');
+    var cumSinceStart = toNum(r.SYL_LN); // 成立以来累计收益率
+    var establishDate = establishMap[code] || null;
     return {
-      code: String(r.FCODE || ''),
+      code: code,
       name: String(r.SHORTNAME || ''),
       typeText: fundTypeLabel(r.FUNDTYPE),
       company: String(r.JJGS || ''),
       return1y: toNum(r.SYL_1N),
-      returnSinceStart: toNum(r.SYL_LN),
+      establishDate: establishDate,
+      returnSinceStartCum: cumSinceStart, // 成立以来累计
+      returnSinceStart: annualizeSinceStart(cumSinceStart, establishDate), // 成立以来年化
       asset: cls.asset,
       operation: cls.operation,
       strategy: cls.strategy,

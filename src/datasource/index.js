@@ -67,13 +67,14 @@ async function search(query, limit = 8) {
 
 /* ============================== 热门 ============================== */
 
-/** 热门基金列表（全量缓存，后端分页+筛选返回） */
+/** 热门基金列表（全量缓存，后端分页+筛选+搜索返回） */
 async function hot(opts = {}) {
   const type = (opts.type || '').trim();
   const sort = (opts.sort || '').trim(); // 'count' | 'name'
   const page = Math.max(1, opts.page || 1);
   const pageSize = Math.min(100, Math.max(1, opts.pageSize || 20));
   const filters = opts.filters || {}; // { asset:[], operation:[], strategy:[], region:[], theme:[] }
+  const keyword = (opts.keyword || '').trim(); // 模糊搜索关键词
 
   // 1️⃣ 优先：天天基金排行接口（按近1年收益率排序，全量获取并缓存）
   if (MODE !== 'mock') {
@@ -97,6 +98,14 @@ async function hot(opts = {}) {
               // 其他维度：直接匹配字段值
               return selected.indexOf(String(f[k] || '')) >= 0;
             });
+          });
+        }
+        // 模糊搜索：匹配基金名称或代码
+        if (keyword) {
+          var kw = keyword.toLowerCase();
+          data = data.filter(function (f) {
+            return (f.name || '').toLowerCase().indexOf(kw) >= 0 ||
+                   (f.code || '').toLowerCase().indexOf(kw) >= 0;
           });
         }
         if (sort === 'name') data.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh'));
