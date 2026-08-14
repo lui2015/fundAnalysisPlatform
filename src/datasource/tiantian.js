@@ -848,30 +848,56 @@ function classifyFund(row) {
 }
 
 /**
- * 批量获取全部开放式基金的成立日期
+ * 同系列份额归一化 key：去掉括号内容与尾部份额字母
+ * 「农银消费主题混合H」「农银消费主题混合A」→「农银消费主题混合」
+ * 用于给排行榜中缺失的特殊份额（H/E/I 等）兜底取同系列成立日期
+ */
+function seriesKeyOfName(name) {
+  return String(name || '')
+    .replace(/\([^)]*\)/g, '')
+    .replace(/[A-Za-z]+$/, '')
+    .trim();
+}
+
+/**
+ * 批量获取全部基金的成立日期
  * FundMNRank 接口不返回成立日期，而年化收益必须依赖它，
- * 因此改用天天基金排行接口（一次请求可取全部 2 万余只，字段以逗号分隔）：
- *   索引 0 = 基金代码，15 = 成立以来累计收益率(%)，16 = 成立日期(YYYY-MM-DD)
- * @returns {Promise<Object>} { code: establishDate }
+ * 因此改用天天基金排行接口（一次请求可取全部，字段以逗号分隔）：
+ *   开放式(dt=kf)：索引 0 = 代码，16 = 成立日期
+ *   货币型(dt=hb)：少一列，成立日期在索引 15
+ * @returns {Promise<{byCode:Object, bySeries:Object}>}
  */
 async function fetchEstablishDates() {
-  var url = 'https://fund.eastmoney.com/data/rankhandler.aspx'
-    + '?op=ph&dt=kf&ft=all&rs=&gs=0&sc=zzf&st=desc&pi=1&pn=25000&dx=1';
-  var text = await http.safeGetText(url, {
-    headers: { Referer: 'https://fund.eastmoney.com/data/fundranking.html' },
-    timeoutMs: 60000,
-  });
-  var map = {};
-  var m = text.match(/datas:\[([\s\S]*?)\],allRecords/);
-  if (!m) return map;
-  var rows = m[1].split('","');
-  for (var i = 0; i < rows.length; i++) {
-    var cols = rows[i].replace(/^"|"$/g, '').split(',');
-    var code = cols[0];
-    var establishDate = cols[16];
-    if (code && /^\d{4}-\d{2}-\d{2}$/.test(establishDate || '')) map[code] = establishDate;
+  var byCode = {};
+  var bySeries = {};
+  var sources = [{ dt: 'kf', idx: 16 }, { dt: 'hb', idx: 15 }];
+
+  for (var si = 0; si < sources.length; si++) {
+    var src = sources[si];
+    try {
+      var url = 'https://fund.eastmoney.com/data/rankhandler.aspx'
+        + '?op=ph&dt=' + src.dt + '&ft=all&rs=&gs=0&sc=zzf&st=desc&pi=1&pn=30000&dx=1';
+      var text = await http.safeGetText(url, {
+        headers: { Referer: 'https://fund.eastmoney.com/data/fundranking.html' },
+        timeoutMs: 60000,
+      });
+      var m = text.match(/datas:\[([\s\S]*?)\],allRecords/);
+      if (!m) continue;
+      var rows = m[1].split('","');
+      for (var i = 0; i < rows.length; i++) {
+        var cols = rows[i].replace(/^"|"$/g, '').split(',');
+        var code = cols[0];
+        var d = cols[src.idx];
+        if (!code || !/^\d{4}-\d{2}-\d{2}$/.test(d || '')) continue;
+        byCode[code] = d;
+        var key = seriesKeyOfName(cols[1]);
+        if (key && !bySeries[key]) bySeries[key] = d;
+      }
+    } catch (e) {
+      logger.warn('成立日期分组获取失败', { dt: src.dt, error: e.message });
+    }
   }
-  return map;
+  return { byCode: byCode, bySeries: bySeries };
 }
 
 /**
@@ -940,10 +966,13 @@ async function hot() {
   if (!allRows.length) throw new Error('热门榜为空');
 
   // 补充成立日期，用于把「成立以来累计收益」换算成「成立以来年化收益」
-  var establishMap = {};
+  var est = { byCode: {}, bySeries: {} };
   try {
-    establishMap = await fetchEstablishDates();
-    logger.info('成立日期映射获取完成', { count: Object.keys(establishMap).length });
+    est = await fetchEstablishDates();
+    logger.info('成立日期映射获取完成', {
+      byCode: Object.keys(est.byCode).length,
+      bySeries: Object.keys(est.bySeries).length,
+    });
   } catch (e) {
     logger.warn('成立日期获取失败，年化收益将为空', { error: e.message });
   }
@@ -951,15 +980,23 @@ async function hot() {
   var result = allRows.map(function (r) {
     var cls = classifyFund(r);
     var code = String(r.FCODE || '');
+    var name = String(r.SHORTNAME || '');
     var cumSinceStart = toNum(r.SYL_LN); // 成立以来累计收益率
-    var establishDate = establishMap[code] || null;
+    // 优先按代码精确匹配；特殊份额（H/E/I 等）缺失时回退同系列份额的成立日期
+    var establishDate = est.byCode[code] || null;
+    var approx = false;
+    if (!establishDate) {
+      var seriesDate = est.bySeries[seriesKeyOfName(name)];
+      if (seriesDate) { establishDate = seriesDate; approx = true; }
+    }
     return {
       code: code,
-      name: String(r.SHORTNAME || ''),
+      name: name,
       typeText: fundTypeLabel(r.FUNDTYPE),
       company: String(r.JJGS || ''),
       return1y: toNum(r.SYL_1N),
       establishDate: establishDate,
+      establishDateApprox: approx, // true 表示成立日期取自同系列份额（近似）
       returnSinceStartCum: cumSinceStart, // 成立以来累计
       returnSinceStart: annualizeSinceStart(cumSinceStart, establishDate), // 成立以来年化
       asset: cls.asset,
