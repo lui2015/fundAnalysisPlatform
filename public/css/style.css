@@ -117,7 +117,6 @@ body {
 }
 
 :root[data-theme='dark'] {
-  .logo__mark { box-shadow: 0 0 10px rgba(0, 229, 255, 0.6), 0 0 20px rgba(255, 43, 214, 0.3); }
   .btn-primary { box-shadow: 0 0 16px rgba(0, 229, 255, 0.45); }
   .btn-primary:hover { box-shadow: 0 0 24px rgba(0, 229, 255, 0.7); }
   .btn-ghost:hover { border-color: var(--c-brand); box-shadow: 0 0 14px rgba(0, 229, 255, 0.35); }
@@ -174,8 +173,8 @@ button, .btn, .tap {
 }
 .logo { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .logo__mark {
-  width: 22px; height: 22px; border-radius: 7px; display: inline-block;
-  background: linear-gradient(135deg, var(--c-brand), var(--c-brand-2));
+  width: 24px; height: 24px; border-radius: 50%;
+  background: url('../img/logo-chick.svg?v=1') center / contain no-repeat;
 }
 .topbar__spacer { flex: 1; }
 .topbar__link {

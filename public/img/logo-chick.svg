@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="body" cx="38%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#ffe98a"/>
+      <stop offset="100%" stop-color="#ffd23f"/>
+    </radialGradient>
+  </defs>
+  <!-- 鸡冠（先画，下半被头部自然盖住） -->
+  <circle cx="25" cy="14" r="6" fill="#ef6560"/>
+  <circle cx="34" cy="10.5" r="7" fill="#ef6560"/>
+  <!-- 翅膀 -->
+  <ellipse cx="12.5" cy="43" rx="5.5" ry="8.5" fill="#f7c02c" transform="rotate(-22 12.5 43)"/>
+  <ellipse cx="51.5" cy="43" rx="5.5" ry="8.5" fill="#f7c02c" transform="rotate(22 51.5 43)"/>
+  <!-- 头/身体 -->
+  <circle cx="32" cy="38" r="23" fill="url(#body)"/>
+  <!-- 腮红 -->
+  <ellipse cx="19.5" cy="43.5" rx="4.5" ry="3" fill="#ffab6b" opacity=".75"/>
+  <ellipse cx="44.5" cy="43.5" rx="4.5" ry="3" fill="#ffab6b" opacity=".75"/>
+  <!-- 眼睛 -->
+  <circle cx="25" cy="35.5" r="3.4" fill="#4a3b2a"/>
+  <circle cx="40" cy="35.5" r="3.4" fill="#4a3b2a"/>
+  <circle cx="26.2" cy="34.3" r="1.1" fill="#ffffff"/>
+  <circle cx="41.2" cy="34.3" r="1.1" fill="#ffffff"/>
+  <!-- 小嘴 -->
+  <path d="M28.5 41.5h7l-3.5 5z" fill="#f2933f"/>
+</svg>
