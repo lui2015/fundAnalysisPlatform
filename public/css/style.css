@@ -180,6 +180,7 @@ button, .btn, .tap {
 .topbar__link {
   font-size: 13px; color: var(--c-text-2); padding: 8px 6px;
   display: inline-flex; align-items: center; min-height: 44px;
+  white-space: nowrap; /* 窄屏下链接文字不折行，防止「评分口径」竖排错乱 */
   background: none; border: none; cursor: pointer;
 }
 .topbar__link:hover { color: var(--c-text); }
@@ -679,6 +680,30 @@ table.data td.num { font-family: var(--font-mono); }
 
 .badge-rules { font-size: 11px; color: var(--c-warn); }
 .na-note { font-size: 12px; color: var(--c-text-3); background: var(--c-surface-2); border-radius: var(--r-sm); padding: 7px 9px; margin: 6px 0; line-height: 1.65; }
+
+/* ======================= xs: <480px（手机端整体优化） ======================= */
+@media (max-width: 479.98px) {
+  /* 顶栏：缩间距与字号；「评分口径」为低频入口，窄屏收起避免顶栏拥挤 */
+  .topbar__inner { padding: 6px 10px; gap: 4px; }
+  .logo { font-size: 15px; gap: 5px; }
+  .logo__mark { width: 22px; height: 22px; }
+  .topbar__link { font-size: 12px; padding: 8px 4px; }
+  .topbar__link[href='rules.html'] { display: none; }
+  #watch-count { font-size: 10px; padding: 0 5px; }
+
+  /* 热门筛选条改横向滑动（原样溢出屏幕被截断）；热门区小搜索与顶部大搜索重复，窄屏隐藏 */
+  .hot__filters { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .hot__filters::-webkit-scrollbar { display: none; }
+  .hot__dims { width: max-content; }
+  .hot__search-wrap { display: none; }
+
+  /* 卡片与 hero 更紧凑 */
+  .hot-card { padding: 9px 10px; }
+  .watch-card { padding: 10px 12px; }
+  .hero { padding: 16px 0 4px; }
+  .hero h1 { font-size: 20px; }
+  .hero p { font-size: 12.5px; }
+}
 
 /* ======================= sm: ≥480px ======================= */
 @media (min-width: 480px) {
