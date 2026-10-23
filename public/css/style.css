@@ -7,7 +7,52 @@
 :root {
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', Menlo, Consolas, monospace;
 
-  /* ===== 赛博朋克深色基底（默认主题） ===== */
+  /* ===== 白天主题（默认）：奶油底 + 柔和绿 ===== */
+  --c-bg: #f6f4ea;
+  --c-bg-2: #efecdf;
+  --c-surface: #ffffff;
+  --c-surface-2: #f4f6ee;
+  --c-border: #e6e2d2;
+  --c-border-strong: #c5dcc9;
+
+  --c-text: #333a30;
+  --c-text-2: #6a7263;
+  --c-text-3: #9aa190;
+  --c-text-dim: #9aa190;
+
+  --c-brand: #3f9e63;
+  --c-brand-2: #7fc794;
+  --c-brand-weak: rgba(63, 158, 99, 0.12);
+  --c-brand-rgb: 63, 158, 99;
+  --c-surface-weak: #f0eee2;
+  --glow-brand: none;
+  --glow-magenta: none;
+
+  /* A 股习惯：红涨绿跌（柔和日间色） */
+  --c-up: #d8402f;
+  --c-down: #1d8a4e;
+  --c-warn: #c77c11;
+  --c-risk-red: #d8402f;
+  --c-risk-yellow: #c77c11;
+  --c-risk-green: #1d8a4e;
+
+  --shadow-1: 0 2px 10px rgba(80, 90, 60, 0.08);
+  --shadow-lg: 0 8px 28px rgba(80, 90, 60, 0.16);
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --sp: 12px;
+  --maxw: 1440px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+/* 浅色模式下页面顶部一点淡绿氛围光 */
+:root:not([data-theme='dark']) body {
+  background-image: radial-gradient(circle at 15% -10%, rgba(122, 196, 148, 0.12), transparent 42%);
+}
+
+/* ===== 夜间主题（手动切换）：赛博朋克深色 ===== */
+:root[data-theme='dark'] {
   --c-bg: #05060f;
   --c-bg-2: #090d1c;
   --c-surface: #0c1226;
@@ -18,11 +63,14 @@
   --c-text: #e8f9ff;
   --c-text-2: #8fc1e6;
   --c-text-3: #5d7ca3;
+  --c-text-dim: #5d7ca3;
 
   /* 霓虹主色：青 + 品红 */
   --c-brand: #00e5ff;
   --c-brand-2: #ff2bd6;
   --c-brand-weak: rgba(0, 229, 255, 0.12);
+  --c-brand-rgb: 0, 229, 255;
+  --c-surface-weak: rgba(255, 255, 255, 0.04);
   --glow-brand: 0 0 12px rgba(0, 229, 255, 0.55);
   --glow-magenta: 0 0 12px rgba(255, 43, 214, 0.5);
 
@@ -35,27 +83,7 @@
   --c-risk-green: #00ff9d;
 
   --shadow-1: 0 2px 16px rgba(0, 229, 255, 0.08), 0 0 0 1px rgba(45, 226, 230, 0.08);
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --sp: 12px;
-  --maxw: 1440px;
-  --safe-b: env(safe-area-inset-bottom, 0px);
-}
-
-/* 浅色主题（跟随系统或手动切换） */
-:root[data-theme='light'] {
-  --c-bg: #f5f7fc;
-  --c-bg-2: #eef2fa;
-  --c-surface: #ffffff;
-  --c-surface-2: #f3f6fd;
-  --c-border: #dde4f2;
-  --c-border-strong: #b9c6e4;
-  --c-text: #16203a;
-  --c-text-2: #55628a;
-  --c-text-3: #8593b5;
-  --c-brand-weak: rgba(75, 141, 255, 0.1);
-  --shadow-1: 0 2px 10px rgba(20, 30, 60, 0.08);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
 
 * { box-sizing: border-box; }
@@ -77,8 +105,8 @@ body {
   padding-bottom: calc(76px + var(--safe-b)); /* 预留移动端底部操作栏 */
 }
 
-/* === 赛博朋克：深色下的霓虹网格 + 双色辉光（仅暗色生效，浅色不套用） === */
-:root:not([data-theme='light']) body {
+/* === 赛博朋克：深色下的霓虹网格 + 双色辉光（仅暗色生效） === */
+:root[data-theme='dark'] body {
   background-image:
     radial-gradient(circle at 12% -8%, rgba(0, 229, 255, 0.14), transparent 45%),
     radial-gradient(circle at 92% 4%, rgba(255, 43, 214, 0.12), transparent 46%),
@@ -88,7 +116,7 @@ body {
   background-attachment: fixed;
 }
 
-:root:not([data-theme='light']) {
+:root[data-theme='dark'] {
   .logo__mark { box-shadow: 0 0 10px rgba(0, 229, 255, 0.6), 0 0 20px rgba(255, 43, 214, 0.3); }
   .btn-primary { box-shadow: 0 0 16px rgba(0, 229, 255, 0.45); }
   .btn-primary:hover { box-shadow: 0 0 24px rgba(0, 229, 255, 0.7); }
@@ -492,7 +520,7 @@ table.data td.num { font-family: var(--font-mono); }
 }
 .actionbar .btn-primary, .actionbar .btn-ghost { flex: 1; }
 
-.modal { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: var(--sp); background: rgba(0, 0, 0, 0.6); }
+.modal { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: var(--sp); background: rgba(20, 24, 16, 0.5); }
 .modal.open { display: flex; }
 .modal__panel { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-lg); padding: 16px; max-width: 520px; width: 100%; max-height: 86vh; overflow-y: auto; }
 .modal__title { margin: 0 0 8px; font-size: 17px; }

@@ -24,18 +24,19 @@
   function isMobile() { return window.innerWidth < 768; }
 
   function theme() {
-    const light = document.documentElement.getAttribute('data-theme') === 'light';
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
     return {
-      // 赛博朋克霓虹配色（暗色默认）
-      text: light ? '#55628a' : '#8fc1e6',
-      axis: light ? '#dde4f2' : '#1c2c52',
-      split: light ? '#eef2fa' : '#111b38',
-      bg: light ? '#ffffff' : '#0c1226',
-      up: '#ff3b6b',
-      down: '#00ff9d',
-      brand: '#00e5ff',
-      brand2: '#ff2bd6',
-      warn: '#ffb800',
+      // 白天：奶油底柔和绿；夜间：赛博朋克霓虹
+      text: dark ? '#8fc1e6' : '#5f6657',
+      axis: dark ? '#1c2c52' : '#e3e0d3',
+      split: dark ? '#111b38' : '#f0eee2',
+      bg: dark ? '#0c1226' : '#ffffff',
+      up: dark ? '#ff3b6b' : '#d8402f',
+      down: dark ? '#00ff9d' : '#1d8a4e',
+      brand: dark ? '#00e5ff' : '#3f9e63',
+      brand2: dark ? '#ff2bd6' : '#7fc794',
+      warn: dark ? '#ffb800' : '#c77c11',
+      area: dark ? 'rgba(0,229,255,0.30)' : 'rgba(63,158,99,0.20)',
     };
   }
 
@@ -122,7 +123,7 @@
           data: f.map(function (p) { return [p.d, +(((p.v / base) - 1) * 100).toFixed(2)]; }),
           lineStyle: { width: 2, color: t.brand },
           areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
-            { offset: 0, color: 'rgba(0,229,255,0.30)' }, { offset: 1, color: 'rgba(0,229,255,0.02)' }] } },
+            { offset: 0, color: t.area }, { offset: 1, color: 'transparent' }] } },
         },
       ];
       /**
@@ -248,7 +249,7 @@
             name: '四刻度',
             lineStyle: { color: t.brand, width: 2 },
             itemStyle: { color: t.brand },
-            areaStyle: { color: 'rgba(75,141,255,0.22)' },
+            areaStyle: { color: t.area },
           }],
         }],
       };

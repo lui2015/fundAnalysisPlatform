@@ -132,17 +132,17 @@
   function initTheme() {
     const btn = $('#theme-toggle');
     const apply = function (t) {
-      if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
       else document.documentElement.removeAttribute('data-theme');
-      if (btn) btn.textContent = t === 'light' ? '☀' : '☾';
+      if (btn) btn.textContent = t === 'dark' ? '☀' : '☾';
     };
     let cur = localStorage.getItem('fap_theme');
-    // 默认暗色（赛博朋克风格），忽略系统偏好
-    if (!cur) cur = 'dark';
+    // 默认白天主题（奶油底 + 柔和绿），忽略系统偏好
+    if (!cur) cur = 'light';
     apply(cur);
     if (btn) {
       btn.addEventListener('click', function () {
-        cur = cur === 'light' ? 'dark' : 'light';
+        cur = cur === 'dark' ? 'light' : 'dark';
         localStorage.setItem('fap_theme', cur);
         apply(cur);
         if (global.FAP_ON_THEME_CHANGE) global.FAP_ON_THEME_CHANGE();
