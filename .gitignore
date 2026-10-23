@@ -4,3 +4,10 @@ data/
 .env.local
 *.log
 .DS_Store
+
+# 服务器运行期缓存（热门全量 ~2.4 万只，勿入库）
+.cache/
+# 本地调试临时产物
+.playwright-cli/
+/hot-fund-fixed.png
+/patch_cache.py
