@@ -705,6 +705,14 @@ table.data td.num { font-family: var(--font-mono); }
   .hero p { font-size: 12.5px; }
 }
 
+/* ======================= md 以下（手机端）：基金信息条不吸顶 ======================= */
+@media (max-width: 767.98px) {
+  .fundbar { position: static; } /* 手机上吸顶两行信息条占用屏幕过多，改为随页面滚动 */
+  .navtabs { top: 56px; }        /* 板块横滑 Tab 仍吸顶，只贴顶栏下方 */
+  html { scroll-padding-top: 112px; }
+  .sec { scroll-margin-top: 112px; }
+}
+
 /* ======================= sm: ≥480px ======================= */
 @media (min-width: 480px) {
   :root { --sp: 14px; }
